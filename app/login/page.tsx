@@ -3,133 +3,151 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import Link from "next/link"
-import { ArrowLeft, GraduationCap, BookOpen, Building, Shield } from "lucide-react"
+import { useRouter } from "next/navigation"
+import Image from "next/image"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { authenticateUser } from "@/lib/auth"
+import { AlertCircle } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function LoginPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const userType = searchParams.get("type") || "student"
-
   const [id, setId] = useState("")
   const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [userType, setUserType] = useState<string | null>(null)
 
-  const userTypeInfo = {
-    student: {
-      title: "Student Login",
-      description: "Access your attendance records and submit justifications",
-      icon: <GraduationCap className="h-8 w-8 text-blue-600 dark:text-blue-400" />,
-      color: "border-blue-200 dark:border-blue-800",
-    },
-    teacher: {
-      title: "Teacher Login",
-      description: "Generate QR codes and manage attendance",
-      icon: <BookOpen className="h-8 w-8 text-green-600 dark:text-green-400" />,
-      color: "border-green-200 dark:border-green-800",
-    },
-    admin: {
-      title: "Administration Login",
-      description: "Manage programs, timetables, and modules",
-      icon: <Building className="h-8 w-8 text-amber-600 dark:text-amber-400" />,
-      color: "border-amber-200 dark:border-amber-800",
-    },
-    "tech-admin": {
-      title: "Technical Administrator Login",
-      description: "Manage accounts and system maintenance",
-      icon: <Shield className="h-8 w-8 text-red-600 dark:text-red-400" />,
-      color: "border-red-200 dark:border-red-800",
-    },
-  }
+  // Get the user type from the URL query parameter
+  useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    const type = params.get("type")
+    if (type) {
+      setUserType(type)
+    }
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
-    setIsLoading(true)
+
+    if (!id || !password || !userType) {
+      setError("Please fill in all fields")
+      return
+    }
+
+    setLoading(true)
+    setError(null)
 
     try {
-      const result = await authenticateUser(id, password, userType)
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id, password, userType }),
+      })
 
-      if (result.success) {
-        // Redirect to the appropriate dashboard
-        router.push(`/dashboard/${userType}`)
-      } else {
-        setError(result.message || "Authentication failed")
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.message || "Login failed")
       }
-    } catch (err) {
-      setError("An error occurred during authentication")
+
+      const data = await response.json()
+
+      // Redirect based on user type
+      switch (userType) {
+        case "student":
+          router.push("/dashboard/student")
+          break
+        case "teacher":
+          router.push("/dashboard/teacher")
+          break
+        case "admin":
+          router.push("/dashboard/admin")
+          break
+        case "tech-admin":
+          router.push("/dashboard/tech-admin")
+          break
+        default:
+          router.push("/")
+      }
+    } catch (error) {
+      console.error("Login error:", error)
+      setError(error instanceof Error ? error.message : "Invalid credentials. Please try again.")
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
-  const info = userTypeInfo[userType as keyof typeof userTypeInfo]
+  const getUserTypeLabel = () => {
+    switch (userType) {
+      case "student":
+        return "Student"
+      case "teacher":
+        return "Teacher"
+      case "admin":
+        return "Administrator"
+      case "tech-admin":
+        return "Technical Administrator"
+      default:
+        return "User"
+    }
+  }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-      <header className="bg-white dark:bg-gray-950 shadow-sm p-4">
-        <div className="container mx-auto">
-          <Link
-            href="/"
-            className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back to Home</span>
-          </Link>
-        </div>
-      </header>
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1 text-center">
+          <div className="flex justify-center mb-4">
+            <Image src="/logo.png" alt="University Logo" width={120} height={120} priority />
+          </div>
+          <CardTitle className="text-2xl">Login</CardTitle>
+          <CardDescription>Enter your credentials to access the {getUserTypeLabel()} dashboard</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-      <main className="flex-1 flex items-center justify-center p-4">
-        <Card className={`w-full max-w-md border-2 ${info.color}`}>
-          <CardHeader className="space-y-2 text-center">
-            <div className="flex justify-center mb-2">{info.icon}</div>
-            <CardTitle className="text-2xl">{info.title}</CardTitle>
-            <CardDescription>{info.description}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="id">ID</Label>
-                <Input
-                  id="id"
-                  type="text"
-                  value={id}
-                  onChange={(e) => setId(e.target.value)}
-                  placeholder="Enter your ID"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  required
-                />
-              </div>
-              {error && <div className="text-sm text-red-600 dark:text-red-400">{error}</div>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Logging in..." : "Login"}
-              </Button>
-            </form>
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Forgot your password? Contact the Technical Administrator.
-            </p>
-          </CardFooter>
-        </Card>
-      </main>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="id">ID Number</Label>
+              <Input
+                id="id"
+                placeholder={`Enter your ${getUserTypeLabel()} ID`}
+                value={id}
+                onChange={(e) => setId(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Logging in..." : "Login"}
+            </Button>
+          </form>
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          <Button variant="link" onClick={() => router.push("/")} className="text-sm text-muted-foreground">
+            Back to Home
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   )
 }

@@ -1,30 +1,115 @@
-# Designing Absence Platform
+# Absence Management Platform
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+A comprehensive platform for managing student attendance at Abbes Laghrour University Khenchela.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/abdenourmokrani2002-gmailcoms-projects/v0-designing-absence-platform)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/9G3S2kJDJQS)
+## Features
 
-## Overview
+- QR code-based attendance tracking
+- Student, teacher, administrator, and technical administrator roles
+- Attendance justification system
+- Course and module management
+- Reporting and statistics
+- Mobile-responsive design
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+## Tech Stack
+
+- Next.js 14 (App Router)
+- TypeScript
+- Tailwind CSS
+- SQLite (via Drizzle ORM)
+- shadcn/ui components
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+ and npm
+- Git
+
+### Installation
+
+1. Clone the repository:
+
+\`\`\`bash
+git clone https://github.com/yourusername/absence-management-platform.git
+cd absence-management-platform
+\`\`\`
+
+2. Install dependencies:
+
+\`\`\`bash
+npm install
+\`\`\`
+
+3. Create a `.env.local` file based on `.env.local.example`:
+
+\`\`\`bash
+cp .env.local.example .env.local
+\`\`\`
+
+4. Create the database directory:
+
+\`\`\`bash
+mkdir -p db/migrations
+\`\`\`
+
+5. Run database migrations and seed initial data:
+
+\`\`\`bash
+npm run db:migrate
+\`\`\`
+
+6. Start the development server:
+
+\`\`\`bash
+npm run dev
+\`\`\`
+
+7. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Default Login Credentials
+
+### Technical Administrator
+- ID: 2020234049140
+- Password: 010218821
+
+### Teacher
+- ID: T12345
+- Password: password
+
+### Student
+- ID: S12345
+- Password: password
+
+### Administrator
+- ID: A12345
+- Password: password
 
 ## Deployment
 
-Your project is live at:
+### Build for Production
 
-**[https://vercel.com/abdenourmokrani2002-gmailcoms-projects/v0-designing-absence-platform](https://vercel.com/abdenourmokrani2002-gmailcoms-projects/v0-designing-absence-platform)**
+\`\`\`bash
+npm run build
+\`\`\`
 
-## Build your app
+### Start Production Server
 
-Continue building your app on:
+\`\`\`bash
+npm run start
+\`\`\`
 
-**[https://v0.dev/chat/projects/9G3S2kJDJQS](https://v0.dev/chat/projects/9G3S2kJDJQS)**
+## Database Backup
 
-## How It Works
+To backup the SQLite database:
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+\`\`\`bash
+cp ./db/absence_management.db ./db/absence_management.db.backup
+\`\`\`
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+\`\`\`
+
+## 9. Let's create a success sound for QR code scanning:

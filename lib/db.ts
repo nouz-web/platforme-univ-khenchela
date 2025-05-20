@@ -1,97 +1,91 @@
 "use server"
 
-// Mock in-memory database for browser preview
-const mockDb = {
-  users: [
-    {
-      id: "2020234049140",
-      name: "Technical Administrator",
-      password: "$2b$10$XdULVQH8Qg5UzQxQBUjkCeq/NjUFAgNuLrBGPZVfnL.76WoOcuTXm", // hashed "010218821"
-      user_type: "tech-admin",
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: "T12345",
-      name: "Dr. Mohammed Alaoui",
-      password: "$2b$10$XdULVQH8Qg5UzQxQBUjkCeq/NjUFAgNuLrBGPZVfnL.76WoOcuTXm", // hashed "password"
-      user_type: "teacher",
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: "S12345",
-      name: "Ahmed Benali",
-      password: "$2b$10$XdULVQH8Qg5UzQxQBUjkCeq/NjUFAgNuLrBGPZVfnL.76WoOcuTXm", // hashed "password"
-      user_type: "student",
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: "A12345",
-      name: "Amina Tazi",
-      password: "$2b$10$XdULVQH8Qg5UzQxQBUjkCeq/NjUFAgNuLrBGPZVfnL.76WoOcuTXm", // hashed "password"
-      user_type: "admin",
-      created_at: new Date().toISOString(),
-    },
-  ],
-  courses: [
-    {
-      id: 1,
-      name: "Introduction to Computer Science",
-      type: "COUR",
-      teacher_id: "T12345",
-      semester: 1,
-      year: "2023-2024",
-    },
-    {
-      id: 2,
-      name: "Programming Fundamentals",
-      type: "TD",
-      teacher_id: "T12345",
-      semester: 1,
-      year: "2023-2024",
-    },
-    {
-      id: 3,
-      name: "Data Structures",
-      type: "TP",
-      teacher_id: "T12345",
-      semester: 1,
-      year: "2023-2024",
-    },
-  ],
-  attendance: [
-    {
-      id: 1,
-      student_id: "S12345",
-      course_id: 1,
-      date: new Date().toISOString(),
-      status: "present",
-    },
-    {
-      id: 2,
-      student_id: "S12345",
-      course_id: 2,
-      date: new Date(Date.now() - 86400000).toISOString(), // yesterday
-      status: "absent",
-    },
-  ],
-  justifications: [],
-  qr_codes: [],
-  notifications: [],
-}
+import { getDbClient } from "./db-client"
+import * as schema from "./db-schema"
+import { eq, and, sql } from "drizzle-orm"
+import bcrypt from "bcrypt"
+import { cookies } from "next/headers"
+import { v4 as uuidv4 } from "uuid"
+
+const db = getDbClient()
 
 // Initialize the database schema
 export async function initializeDb() {
-  console.log("Mock database initialized")
-  return true
+  try {
+    // Check if we can query the database
+    await db.select().from(schema.users).limit(1)
+    return true
+  } catch (error) {
+    console.error("Database initialization error:", error)
+    return false
+  }
+}
+
+// Session management
+export async function createSession(userId: string) {
+  const sessionId = uuidv4()
+  const expiresAt = new Date()
+  expiresAt.setDate(expiresAt.getDate() + 7) // 7 days from now
+
+  await db.insert(schema.sessions).values({
+    id: sessionId,
+    user_id: userId,
+    expires_at: expiresAt.toISOString(),
+  })
+
+  cookies().set("session_id", sessionId, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    expires: expiresAt,
+    path: "/",
+  })
+
+  return sessionId
+}
+
+export async function getUserFromSession() {
+  const sessionId = cookies().get("session_id")?.value
+
+  if (!sessionId) return null
+
+  const session = await db.select().from(schema.sessions).where(eq(schema.sessions.id, sessionId)).get()
+
+  if (!session || new Date(session.expires_at) < new Date()) {
+    cookies().delete("session_id")
+    return null
+  }
+
+  const user = await db.select().from(schema.users).where(eq(schema.users.id, session.user_id)).get()
+
+  if (!user) {
+    cookies().delete("session_id")
+    return null
+  }
+
+  return {
+    id: user.id,
+    name: user.name,
+    userType: user.user_type,
+  }
+}
+
+export async function deleteSession() {
+  const sessionId = cookies().get("session_id")?.value
+
+  if (sessionId) {
+    await db.delete(schema.sessions).where(eq(schema.sessions.id, sessionId))
+    cookies().delete("session_id")
+  }
 }
 
 // User functions
 export async function createUser(id: string, name: string, password: string, userType: string) {
-  // In a real implementation, we would hash the password
-  mockDb.users.push({
+  const hashedPassword = await bcrypt.hash(password, 10)
+
+  await db.insert(schema.users).values({
     id,
     name,
-    password: `hashed_${password}`, // Simulate hashing
+    password: hashedPassword,
     user_type: userType,
     created_at: new Date().toISOString(),
   })
@@ -109,14 +103,21 @@ export async function getUserByIdAndPassword(id: string, password: string, userT
     }
   }
 
-  // For demo purposes, accept any password for existing users
-  const user = mockDb.users.find((u) => u.id === id && u.user_type === userType)
+  const user = await db
+    .select()
+    .from(schema.users)
+    .where(and(eq(schema.users.id, id), eq(schema.users.user_type, userType)))
+    .get()
 
   if (!user) {
     return null
   }
 
-  // In a real implementation, we would compare the hashed password
+  const passwordMatch = await bcrypt.compare(password, user.password)
+  if (!passwordMatch) {
+    return null
+  }
+
   return {
     id: user.id,
     name: user.name,
@@ -126,17 +127,17 @@ export async function getUserByIdAndPassword(id: string, password: string, userT
 
 export async function getAllUsers(userType?: string) {
   if (userType) {
-    return mockDb.users
-      .filter((u) => u.user_type === userType)
-      .map((u) => ({
-        id: u.id,
-        name: u.name,
-        user_type: u.user_type,
-        created_at: u.created_at,
-      }))
+    const users = await db.select().from(schema.users).where(eq(schema.users.user_type, userType))
+    return users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      user_type: u.user_type,
+      created_at: u.created_at,
+    }))
   }
 
-  return mockDb.users.map((u) => ({
+  const users = await db.select().from(schema.users)
+  return users.map((u) => ({
     id: u.id,
     name: u.name,
     user_type: u.user_type,
@@ -146,64 +147,102 @@ export async function getAllUsers(userType?: string) {
 
 // Course functions
 export async function createCourse(name: string, type: string, teacherId: string, semester: number, year: string) {
-  const id = mockDb.courses.length + 1
-  const newCourse = { id, name, type, teacher_id: teacherId, semester, year }
-  mockDb.courses.push(newCourse)
-  return newCourse
+  const result = await db
+    .insert(schema.courses)
+    .values({
+      name,
+      type,
+      teacher_id: teacherId,
+      semester,
+      year,
+    })
+    .returning()
+
+  return result[0]
 }
 
 export async function getCoursesByTeacher(teacherId: string) {
-  return mockDb.courses.filter((c) => c.teacher_id === teacherId)
+  return await db.select().from(schema.courses).where(eq(schema.courses.teacher_id, teacherId))
 }
 
 // Attendance functions
 export async function recordAttendance(studentId: string, courseId: number, status: string) {
-  const id = mockDb.attendance.length + 1
-  const newAttendance = {
-    id,
-    student_id: studentId,
-    course_id: courseId,
-    date: new Date().toISOString(),
-    status,
+  // Check if attendance already exists for this student and course today
+  const today = new Date().toISOString().split("T")[0]
+  const existingAttendance = await db
+    .select()
+    .from(schema.attendance)
+    .where(
+      and(
+        eq(schema.attendance.student_id, studentId),
+        eq(schema.attendance.course_id, courseId),
+        sql`date(${schema.attendance.date}) = date('${today}')`,
+      ),
+    )
+    .get()
+
+  if (existingAttendance) {
+    // Update existing attendance
+    await db.update(schema.attendance).set({ status }).where(eq(schema.attendance.id, existingAttendance.id))
+
+    return existingAttendance
   }
-  mockDb.attendance.push(newAttendance)
-  return newAttendance
+
+  // Create new attendance record
+  const result = await db
+    .insert(schema.attendance)
+    .values({
+      student_id: studentId,
+      course_id: courseId,
+      date: new Date().toISOString(),
+      status,
+    })
+    .returning()
+
+  return result[0]
 }
 
 export async function getStudentAttendance(studentId: string) {
-  return mockDb.attendance
-    .filter((a) => a.student_id === studentId)
-    .map((a) => {
-      const course = mockDb.courses.find((c) => c.id === a.course_id)
-      return {
-        ...a,
-        course_name: course ? course.name : "Unknown Course",
-        course_type: course ? course.type : "Unknown",
-      }
+  const attendanceRecords = await db.select().from(schema.attendance).where(eq(schema.attendance.student_id, studentId))
+
+  const results = []
+  for (const record of attendanceRecords) {
+    const course = await db.select().from(schema.courses).where(eq(schema.courses.id, record.course_id)).get()
+    results.push({
+      ...record,
+      course_name: course ? course.name : "Unknown Course",
+      course_type: course ? course.type : "Unknown",
     })
+  }
+
+  return results
 }
 
 // QR Code functions
 export async function createQRCode(teacherId: string, courseId: number, code: string, expiresAt: Date) {
-  const id = mockDb.qr_codes.length + 1
-  const newQRCode = {
-    id,
-    teacher_id: teacherId,
-    course_id: courseId,
-    code,
-    created_at: new Date().toISOString(),
-    expires_at: expiresAt.toISOString(),
-  }
-  mockDb.qr_codes.push(newQRCode)
-  return newQRCode
+  const result = await db
+    .insert(schema.qr_codes)
+    .values({
+      teacher_id: teacherId,
+      course_id: courseId,
+      code,
+      created_at: new Date().toISOString(),
+      expires_at: expiresAt.toISOString(),
+    })
+    .returning()
+
+  return result[0]
 }
 
 export async function validateQRCode(code: string) {
-  const qrCode = mockDb.qr_codes.find((qr) => qr.code === code && new Date(qr.expires_at) > new Date())
+  const qrCode = await db.select().from(schema.qr_codes).where(eq(schema.qr_codes.code, code)).get()
 
-  if (!qrCode) return null
+  if (!qrCode || new Date(qrCode.expires_at) <= new Date()) {
+    return null
+  }
 
-  const course = mockDb.courses.find((c) => c.id === qrCode.course_id)
+  const course = await db.select().from(schema.courses).where(eq(schema.courses.id, qrCode.course_id)).get()
+
   return {
     ...qrCode,
     course_name: course ? course.name : "Unknown Course",
@@ -213,67 +252,77 @@ export async function validateQRCode(code: string) {
 
 // Justification functions
 export async function submitJustification(studentId: string, attendanceId: number, filePath: string) {
-  const id = mockDb.justifications.length + 1
-  const newJustification = {
-    id,
-    student_id: studentId,
-    attendance_id: attendanceId,
-    file_path: filePath,
-    status: "pending",
-    submitted_at: new Date().toISOString(),
-  }
-  mockDb.justifications.push(newJustification)
-  return newJustification
+  const result = await db
+    .insert(schema.justifications)
+    .values({
+      student_id: studentId,
+      attendance_id: attendanceId,
+      file_path: filePath,
+      status: "pending",
+      submitted_at: new Date().toISOString(),
+    })
+    .returning()
+
+  return result[0]
 }
 
 export async function getJustificationsByTeacher(teacherId: string) {
-  const teacherCourses = mockDb.courses.filter((c) => c.teacher_id === teacherId).map((c) => c.id)
+  // Get teacher's courses
+  const courses = await db.select().from(schema.courses).where(eq(schema.courses.teacher_id, teacherId))
+  const courseIds = courses.map((c) => c.id)
 
-  return mockDb.justifications
-    .filter((j) => {
-      const attendance = mockDb.attendance.find((a) => a.id === j.attendance_id)
-      return attendance && teacherCourses.includes(attendance.course_id)
-    })
-    .map((j) => {
-      const attendance = mockDb.attendance.find((a) => a.id === j.attendance_id)
-      const course = attendance ? mockDb.courses.find((c) => c.id === attendance.course_id) : null
-      const student = mockDb.users.find((u) => u.id === j.student_id)
+  // Get all justifications
+  const justifications = await db.select().from(schema.justifications)
+  const results = []
 
-      return {
-        ...j,
+  for (const justification of justifications) {
+    const attendance = await db
+      .select()
+      .from(schema.attendance)
+      .where(eq(schema.attendance.id, justification.attendance_id))
+      .get()
+
+    if (attendance && courseIds.includes(attendance.course_id)) {
+      const course = await db.select().from(schema.courses).where(eq(schema.courses.id, attendance.course_id)).get()
+      const student = await db.select().from(schema.users).where(eq(schema.users.id, justification.student_id)).get()
+
+      results.push({
+        ...justification,
         absence_date: attendance ? attendance.date : null,
         course_name: course ? course.name : "Unknown Course",
         student_name: student ? student.name : "Unknown Student",
-      }
-    })
+      })
+    }
+  }
+
+  return results
 }
 
 export async function updateJustificationStatus(justificationId: number, status: string) {
-  const justification = mockDb.justifications.find((j) => j.id === justificationId)
-  if (justification) {
-    justification.status = status
-  }
+  await db.update(schema.justifications).set({ status }).where(eq(schema.justifications.id, justificationId))
+
   return { id: justificationId, status }
 }
 
 // Notification functions
 export async function createNotification(title: string, message: string, createdBy: string) {
-  const id = mockDb.notifications.length + 1
-  const newNotification = {
-    id,
-    title,
-    message,
-    active: true,
-    created_at: new Date().toISOString(),
-    created_by: createdBy,
-  }
-  mockDb.notifications.push(newNotification)
-  return newNotification
+  const result = await db
+    .insert(schema.notifications)
+    .values({
+      title,
+      message,
+      active: true,
+      created_at: new Date().toISOString(),
+      created_by: createdBy,
+    })
+    .returning()
+
+  return result[0]
 }
 
 export async function getActiveNotifications() {
-  return mockDb.notifications.filter((n) => n.active)
+  return await db.select().from(schema.notifications).where(eq(schema.notifications.active, true))
 }
 
-// Initialize the mock database
+// Initialize the database
 initializeDb().catch(console.error)
