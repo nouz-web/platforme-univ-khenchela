@@ -6,28 +6,25 @@ export async function POST(request: NextRequest) {
     const { id, password, userType } = await request.json()
 
     if (!id || !password || !userType) {
-      return NextResponse.json({ message: "ID, password, and user type are required" }, { status: 400 })
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
     const user = await getUserByIdAndPassword(id, password, userType)
 
     if (!user) {
-      return NextResponse.json({ message: "Invalid credentials" }, { status: 401 })
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
     // Create a session
-    const sessionId = await createSession(user.id)
+    await createSession(user.id)
 
     return NextResponse.json({
-      message: "Login successful",
-      user: {
-        id: user.id,
-        name: user.name,
-        userType: user.userType,
-      },
+      id: user.id,
+      name: user.name,
+      userType: user.userType,
     })
   } catch (error) {
     console.error("Login error:", error)
-    return NextResponse.json({ message: "An error occurred during login" }, { status: 500 })
+    return NextResponse.json({ error: "An error occurred during login" }, { status: 500 })
   }
 }

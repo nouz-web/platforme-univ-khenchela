@@ -3,7 +3,7 @@
 import { getDbClient } from "./db-client"
 import * as schema from "./db-schema"
 import { eq, and, sql } from "drizzle-orm"
-import bcrypt from "bcrypt"
+import bcrypt from "bcryptjs" // Changed from bcrypt to bcryptjs
 import { cookies } from "next/headers"
 import { v4 as uuidv4 } from "uuid"
 
