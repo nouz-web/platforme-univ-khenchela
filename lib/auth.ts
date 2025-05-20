@@ -1,7 +1,7 @@
 "use server"
 
 import { cookies } from "next/headers"
-import { getUserByIdAndPassword } from "@/lib/db"
+import { getUserByIdAndPassword } from "./db"
 
 export async function authenticateUser(id: string, password: string, userType: string) {
   try {

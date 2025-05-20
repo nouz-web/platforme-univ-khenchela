@@ -1,24 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { validateQRCode, recordAttendance, getUserFromSession } from "@/lib/db"
+import { validateQRCode, recordAttendance } from "@/lib/db"
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the current user from the session
-    const user = await getUserFromSession()
-
-    if (!user) {
-      return NextResponse.json({ message: "You must be logged in to record attendance" }, { status: 401 })
-    }
-
-    if (user.userType !== "student") {
-      return NextResponse.json({ message: "Only students can record attendance" }, { status: 403 })
-    }
-
     // Get the QR code from the request body
-    const { qrCode } = await request.json()
+    const { qrCode, studentId } = await request.json()
 
-    if (!qrCode) {
-      return NextResponse.json({ message: "QR code is required" }, { status: 400 })
+    if (!qrCode || !studentId) {
+      return NextResponse.json({ message: "QR code and student ID are required" }, { status: 400 })
     }
 
     // Validate the QR code
@@ -29,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Record the attendance
-    const attendance = await recordAttendance(user.id, validatedQR.course_id, "present")
+    const attendance = await recordAttendance(studentId, validatedQR.course_id, "present")
 
     return NextResponse.json({
       message: "Attendance recorded successfully",

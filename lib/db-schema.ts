@@ -1,5 +1,64 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core"
 
+// Define types for our database entities
+export interface User {
+  id: string
+  name: string
+  password: string
+  user_type: string
+  created_at: string
+}
+
+export interface Course {
+  id: number
+  name: string
+  type: string
+  teacher_id: string
+  semester: number
+  year: string
+}
+
+export interface Attendance {
+  id: number
+  student_id: string
+  course_id: number
+  date: string
+  status: string
+}
+
+export interface Justification {
+  id: number
+  student_id: string
+  attendance_id: number
+  file_path: string
+  status: string
+  submitted_at: string
+}
+
+export interface QRCode {
+  id: number
+  teacher_id: string
+  course_id: number
+  code: string
+  created_at: string
+  expires_at: string
+}
+
+export interface Notification {
+  id: number
+  title: string
+  message: string
+  active: boolean
+  created_at: string
+  created_by: string
+}
+
+export interface Session {
+  id: string
+  user_id: string
+  expires_at: string
+}
+
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
