@@ -66,8 +66,8 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
 
           <Link href="/" className="flex items-center space-x-2">
             <Image
-              src="/placeholder.svg?height=40&width=40"
-              alt="University Logo"
+              src="/logo.png"
+              alt="Abbes Laghrour University Khenchela Logo"
               width={40}
               height={40}
               className="rounded-full"

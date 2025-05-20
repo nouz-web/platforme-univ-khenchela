@@ -7,14 +7,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Download } from "lucide-react"
+import { Download, AlertCircle, FileText, FileSpreadsheet, FileSpreadsheetIcon as FileCsv } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export default function ReportsPage() {
   const [selectedProgram, setSelectedProgram] = useState("all")
   const [selectedModule, setSelectedModule] = useState("all")
   const [selectedPeriod, setSelectedPeriod] = useState("semester")
+  const [exportFormat, setExportFormat] = useState("pdf")
+  const [exportSuccess, setExportSuccess] = useState(false)
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
 
   // Mock data for programs
   const programs = [
@@ -141,8 +155,32 @@ export default function ReportsPage() {
   })
 
   const exportReport = () => {
-    // In a real implementation, this would generate a PDF or Excel file
-    alert("Report exported successfully!")
+    setIsExportDialogOpen(true)
+  }
+
+  const handleExport = () => {
+    setIsExporting(true)
+
+    // Simulate export process
+    setTimeout(() => {
+      setIsExporting(false)
+      setIsExportDialogOpen(false)
+      setExportSuccess(true)
+      setTimeout(() => setExportSuccess(false), 3000)
+    }, 2000)
+  }
+
+  const getFormatIcon = (format: string) => {
+    switch (format) {
+      case "pdf":
+        return <FileText className="h-5 w-5 text-red-500" />
+      case "excel":
+        return <FileSpreadsheet className="h-5 w-5 text-green-500" />
+      case "csv":
+        return <FileCsv className="h-5 w-5 text-blue-500" />
+      default:
+        return <FileText className="h-5 w-5" />
+    }
   }
 
   return (
@@ -154,6 +192,17 @@ export default function ReportsPage() {
           Export Report
         </Button>
       </div>
+
+      {exportSuccess && (
+        <Alert className="mb-4 bg-green-50 text-green-800 border-green-200">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Export Successful</AlertTitle>
+          <AlertDescription>
+            Your report has been exported successfully in {exportFormat.toUpperCase()} format. Check your downloads
+            folder.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card className="mb-6">
         <CardHeader>
@@ -392,6 +441,105 @@ export default function ReportsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Export Report</DialogTitle>
+            <DialogDescription>Choose your export format and options</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="export-format">Export Format</Label>
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  variant={exportFormat === "pdf" ? "default" : "outline"}
+                  className="flex flex-col items-center justify-center h-24 p-2"
+                  onClick={() => setExportFormat("pdf")}
+                >
+                  <FileText className="h-8 w-8 mb-2" />
+                  <span>PDF</span>
+                </Button>
+                <Button
+                  variant={exportFormat === "excel" ? "default" : "outline"}
+                  className="flex flex-col items-center justify-center h-24 p-2"
+                  onClick={() => setExportFormat("excel")}
+                >
+                  <FileSpreadsheet className="h-8 w-8 mb-2" />
+                  <span>Excel</span>
+                </Button>
+                <Button
+                  variant={exportFormat === "csv" ? "default" : "outline"}
+                  className="flex flex-col items-center justify-center h-24 p-2"
+                  onClick={() => setExportFormat("csv")}
+                >
+                  <FileCsv className="h-8 w-8 mb-2" />
+                  <span>CSV</span>
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Include in Report</Label>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="include-summary" defaultChecked />
+                  <label
+                    htmlFor="include-summary"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Summary Statistics
+                  </label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="include-details" defaultChecked />
+                  <label
+                    htmlFor="include-details"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Student Details
+                  </label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="include-charts" defaultChecked />
+                  <label
+                    htmlFor="include-charts"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Charts and Graphs
+                  </label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="include-logo" defaultChecked />
+                  <label
+                    htmlFor="include-logo"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    University Logo
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsExportDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleExport} disabled={isExporting}>
+              {isExporting ? (
+                <span>Exporting...</span>
+              ) : (
+                <span className="flex items-center">
+                  {getFormatIcon(exportFormat)}
+                  <span className="ml-2">Export as {exportFormat.toUpperCase()}</span>
+                </span>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

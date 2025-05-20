@@ -7,14 +7,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Download } from "lucide-react"
+import { Download, AlertCircle } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function StudentAbsencesPage() {
   const [selectedSemester, setSelectedSemester] = useState("all")
   const [selectedType, setSelectedType] = useState("all")
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
+  const [exportFormat, setExportFormat] = useState("pdf")
+  const [showExportOptions, setShowExportOptions] = useState(false)
+  const [exportSuccess, setExportSuccess] = useState(false)
 
   // Mock data for absences
   const absences = [
@@ -87,19 +91,78 @@ export default function StudentAbsencesPage() {
   }
 
   const exportAbsences = () => {
-    // In a real implementation, this would generate a CSV or PDF file
-    alert("Absences exported successfully!")
+    // In a real implementation, this would generate a file in the selected format
+    setTimeout(() => {
+      setExportSuccess(true)
+      setTimeout(() => setExportSuccess(false), 3000)
+    }, 1000)
   }
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">My Absences</h1>
-        <Button onClick={exportAbsences}>
+        <Button onClick={() => setShowExportOptions(!showExportOptions)}>
           <Download className="mr-2 h-4 w-4" />
           Export
         </Button>
       </div>
+
+      {showExportOptions && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Export Options</CardTitle>
+            <CardDescription>Select format and options for your export</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="format">Export Format</Label>
+                <Select value={exportFormat} onValueChange={setExportFormat}>
+                  <SelectTrigger id="format">
+                    <SelectValue placeholder="Select format" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pdf">PDF Document</SelectItem>
+                    <SelectItem value="excel">Excel Spreadsheet</SelectItem>
+                    <SelectItem value="csv">CSV File</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="include-details">Include Details</Label>
+                <Select defaultValue="summary">
+                  <SelectTrigger id="include-details">
+                    <SelectValue placeholder="Select detail level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="summary">Summary Only</SelectItem>
+                    <SelectItem value="detailed">Detailed Report</SelectItem>
+                    <SelectItem value="full">Full Report with Justifications</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-end">
+                <Button onClick={exportAbsences} className="w-full">
+                  Generate {exportFormat.toUpperCase()}
+                </Button>
+              </div>
+            </div>
+
+            {exportSuccess && (
+              <Alert className="mt-4 bg-green-50 text-green-800 border-green-200">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Success</AlertTitle>
+                <AlertDescription>
+                  Your {exportFormat.toUpperCase()} has been generated successfully. Check your downloads folder.
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="mb-6">
         <CardHeader>

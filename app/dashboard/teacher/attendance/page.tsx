@@ -8,13 +8,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Download, Search } from "lucide-react"
+import { Calendar, Download, Search, AlertCircle } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function AttendanceRecordsPage() {
   const [selectedCourse, setSelectedCourse] = useState("all")
   const [selectedType, setSelectedType] = useState("all")
   const [selectedDate, setSelectedDate] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [exportFormat, setExportFormat] = useState("pdf")
+  const [showExportOptions, setShowExportOptions] = useState(false)
+  const [exportSuccess, setExportSuccess] = useState(false)
+
   const [courses, setCourses] = useState([
     { id: "CS101", name: "Introduction to Computer Science", type: "COUR" },
     { id: "CS102", name: "Programming Fundamentals", type: "TD" },
@@ -96,19 +102,150 @@ export default function AttendanceRecordsPage() {
   }
 
   const exportAttendance = () => {
-    // In a real implementation, this would generate a CSV or Excel file
-    alert("Attendance data exported successfully!")
+    // In a real implementation, this would generate a file in the selected format
+    setTimeout(() => {
+      setExportSuccess(true)
+      setTimeout(() => setExportSuccess(false), 3000)
+    }, 1000)
   }
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Attendance Records</h1>
-        <Button onClick={exportAttendance}>
+        <Button onClick={() => setShowExportOptions(!showExportOptions)}>
           <Download className="mr-2 h-4 w-4" />
           Export
         </Button>
       </div>
+
+      {showExportOptions && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Export Options</CardTitle>
+            <CardDescription>Select format and options for your export</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="format">
+              <TabsList className="mb-4">
+                <TabsTrigger value="format">Format</TabsTrigger>
+                <TabsTrigger value="options">Options</TabsTrigger>
+                <TabsTrigger value="schedule">Schedule</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="format">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="format">Export Format</Label>
+                    <Select value={exportFormat} onValueChange={setExportFormat}>
+                      <SelectTrigger id="format">
+                        <SelectValue placeholder="Select format" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pdf">PDF Document</SelectItem>
+                        <SelectItem value="excel">Excel Spreadsheet</SelectItem>
+                        <SelectItem value="csv">CSV File</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="include-details">Include Details</Label>
+                    <Select defaultValue="summary">
+                      <SelectTrigger id="include-details">
+                        <SelectValue placeholder="Select detail level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="summary">Summary Only</SelectItem>
+                        <SelectItem value="detailed">Detailed Report</SelectItem>
+                        <SelectItem value="full">Full Report with Justifications</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-end">
+                    <Button onClick={exportAttendance} className="w-full">
+                      Generate {exportFormat.toUpperCase()}
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="options">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="include-header">Include Header</Label>
+                    <Select defaultValue="yes">
+                      <SelectTrigger id="include-header">
+                        <SelectValue placeholder="Include header?" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="yes">Yes</SelectItem>
+                        <SelectItem value="no">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="include-logo">Include University Logo</Label>
+                    <Select defaultValue="yes">
+                      <SelectTrigger id="include-logo">
+                        <SelectValue placeholder="Include logo?" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="yes">Yes</SelectItem>
+                        <SelectItem value="no">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="schedule">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="schedule-export">Schedule Export</Label>
+                    <Select defaultValue="no">
+                      <SelectTrigger id="schedule-export">
+                        <SelectValue placeholder="Schedule export?" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no">No</SelectItem>
+                        <SelectItem value="daily">Daily</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email-export">Email Export</Label>
+                    <Select defaultValue="yes">
+                      <SelectTrigger id="email-export">
+                        <SelectValue placeholder="Email export?" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="yes">Yes</SelectItem>
+                        <SelectItem value="no">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            {exportSuccess && (
+              <Alert className="mt-4 bg-green-50 text-green-800 border-green-200">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Success</AlertTitle>
+                <AlertDescription>
+                  Your {exportFormat.toUpperCase()} has been generated successfully. Check your downloads folder.
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="mb-6">
         <CardHeader>
