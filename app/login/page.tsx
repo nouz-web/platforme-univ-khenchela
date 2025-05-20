@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -14,20 +14,23 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [id, setId] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [userType, setUserType] = useState<string | null>(null)
 
-  // Get the user type from the URL query parameter
-  useState(() => {
-    const params = new URLSearchParams(window.location.search)
-    const type = params.get("type")
+  // Get the user type from the URL query parameter using useSearchParams
+  useEffect(() => {
+    const type = searchParams.get("type")
     if (type) {
       setUserType(type)
+    } else {
+      // Default to student if no type is specified
+      setUserType("student")
     }
-  })
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -94,6 +97,11 @@ export default function LoginPage() {
       default:
         return "User"
     }
+  }
+
+  // Don't render until userType is set
+  if (!userType) {
+    return null
   }
 
   return (
