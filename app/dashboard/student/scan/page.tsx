@@ -21,85 +21,85 @@ export default function ScanQRCodePage() {
   const [cameraPermission, setCameraPermission] = useState<"granted" | "denied" | "prompt">("prompt")
   const [activeTab, setActiveTab] = useState<"camera" | "manual">("camera")
   const [isLoading, setIsLoading] = useState(false)
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [debug, setDebug] = useState<string[]>([])
+
+  // Function to add debug messages
+  const addDebug = (msg: string) => {
+    setDebug((prev) => [...prev, `${new Date().toISOString().split("T")[1].split(".")[0]}: ${msg}`])
+    console.log(msg)
+  }
 
   const startScanner = async () => {
     setIsLoading(true)
     setMessage(null)
-
-    // Clear any existing timeout
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
-    }
-
-    // Set a timeout for camera initialization
-    timeoutRef.current = setTimeout(() => {
-      if (isLoading && !videoStream) {
-        setIsLoading(false)
-        setMessage({
-          type: "warning",
-          text: "Camera access timed out. Please check your camera permissions or use manual entry.",
-        })
-        setCameraPermission("denied")
-        setActiveTab("manual")
-      }
-    }, 10000) // 10 second timeout
+    addDebug("Starting camera...")
 
     try {
       // Check if the browser supports getUserMedia
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error("Your browser doesn't support camera access. Please use manual entry.")
+        throw new Error("Your browser doesn't support camera access")
       }
 
-      // Request camera permissions
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "environment",
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      })
+      addDebug("Browser supports getUserMedia")
 
-      // Clear the timeout since we successfully got the stream
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-        timeoutRef.current = null
+      // First, let's try with simpler constraints
+      const constraints = {
+        video: true,
+        audio: false,
       }
 
+      addDebug("Requesting camera with simple constraints")
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
+      addDebug("Camera access granted")
+
+      // Store the stream
       setVideoStream(stream)
-      setCameraPermission("granted")
-      setScanning(true)
-      setIsLoading(false)
+
+      // Ensure we have a video element reference
+      if (!videoRef.current) {
+        addDebug("No video element reference")
+        throw new Error("Video element not found")
+      }
 
       // Connect the stream to the video element
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        videoRef.current.play().catch((err) => {
-          console.error("Error playing video:", err)
-          setMessage({
-            type: "error",
-            text: "Could not play video stream. Please try again or use manual entry.",
+      videoRef.current.srcObject = stream
+      addDebug("Stream connected to video element")
+
+      // Set up event listeners for the video element
+      videoRef.current.onloadedmetadata = () => {
+        addDebug("Video metadata loaded")
+        videoRef.current
+          ?.play()
+          .then(() => {
+            addDebug("Video playback started")
+            setScanning(true)
+            setIsLoading(false)
+            setCameraPermission("granted")
+
+            // In a real implementation, we would use a QR code scanning library
+            // For this example, we'll simulate scanning after a delay
+            setTimeout(() => {
+              if (scanning) {
+                // Simulate a successful scan
+                const simulatedCode = "COURSE-123-" + Math.floor(Math.random() * 1000)
+                addDebug(`Simulated QR code detected: ${simulatedCode}`)
+                handleQRCodeDetected(simulatedCode)
+              }
+            }, 3000)
           })
-        })
+          .catch((err) => {
+            addDebug(`Error playing video: ${err.message}`)
+            throw new Error(`Could not play video: ${err.message}`)
+          })
       }
 
-      // In a real implementation, we would use a QR code scanning library
-      // For this example, we'll simulate scanning after a delay
-      setTimeout(() => {
-        if (scanning) {
-          // Simulate a successful scan
-          const simulatedCode = "COURSE-123-" + Math.floor(Math.random() * 1000)
-          handleQRCodeDetected(simulatedCode)
-        }
-      }, 3000)
+      videoRef.current.onerror = (event) => {
+        addDebug(`Video element error: ${event.type}`)
+        throw new Error("Video element error")
+      }
     } catch (error) {
-      // Clear the timeout
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-        timeoutRef.current = null
-      }
-
       console.error("Error accessing camera:", error)
+      addDebug(`Camera error: ${error instanceof Error ? error.message : "Unknown error"}`)
       setIsLoading(false)
 
       // Handle specific error types
@@ -144,16 +144,22 @@ export default function ScanQRCodePage() {
   }
 
   const stopScanner = () => {
+    addDebug("Stopping scanner")
     if (videoStream) {
-      videoStream.getTracks().forEach((track) => track.stop())
+      videoStream.getTracks().forEach((track) => {
+        addDebug(`Stopping track: ${track.kind}`)
+        track.stop()
+      })
       setVideoStream(null)
     }
 
     if (videoRef.current) {
       videoRef.current.srcObject = null
+      addDebug("Cleared video source")
     }
 
     setScanning(false)
+    addDebug("Scanner stopped")
   }
 
   const handleQRCodeDetected = (code: string) => {
@@ -209,10 +215,6 @@ export default function ScanQRCodePage() {
     return () => {
       if (videoStream) {
         videoStream.getTracks().forEach((track) => track.stop())
-      }
-
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
       }
     }
   }, [videoStream])
@@ -297,6 +299,21 @@ export default function ScanQRCodePage() {
                   <Button onClick={startScanner} disabled={isLoading || cameraPermission === "denied"} className="mt-2">
                     {isLoading ? "Initializing Camera..." : "Start Camera"}
                   </Button>
+                </div>
+              )}
+
+              {/* Always render the video element but hide it when not scanning */}
+              <video ref={videoRef} className={`${scanning ? "" : "hidden"} w-0 h-0`} autoPlay playsInline muted />
+
+              {/* Debug information - hidden in production */}
+              {process.env.NODE_ENV === "development" && debug.length > 0 && (
+                <div className="mt-4 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-auto max-h-32">
+                  <p className="font-bold mb-1">Debug Info:</p>
+                  {debug.map((msg, i) => (
+                    <div key={i} className="text-xs">
+                      {msg}
+                    </div>
+                  ))}
                 </div>
               )}
             </TabsContent>
