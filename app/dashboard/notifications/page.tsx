@@ -1,35 +1,47 @@
-import { AlertCircle } from "lucide-react"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import type { Metadata } from "next"
+import { getCurrentUser } from "@/lib/auth"
+import { getActiveNotifications } from "@/lib/db"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Bell } from "lucide-react"
 
-export default function NotificationsPage() {
+export const metadata: Metadata = {
+  title: "Notifications | Absence Management Platform",
+  description: "View your notifications",
+}
+
+export default async function NotificationsPage() {
+  const user = await getCurrentUser()
+  const notifications = await getActiveNotifications()
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">Notifications</h1>
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight">Notifications</h1>
+      </div>
 
-      <Alert className="mb-6 bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900 dark:text-amber-50 dark:border-amber-800">
-        <AlertCircle className="h-5 w-5" />
-        <AlertTitle className="text-lg font-semibold">System Maintenance</AlertTitle>
-        <AlertDescription className="text-base">
-          The notifications system is currently undergoing maintenance. We apologize for any inconvenience this may
-          cause. Our technical team is working to restore full functionality as soon as possible.
-        </AlertDescription>
-      </Alert>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Notifications Center</CardTitle>
-          <CardDescription>View and manage your notifications</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <AlertCircle className="h-16 w-16 text-amber-500 mb-4" />
-          <h3 className="text-xl font-medium mb-2">Service Temporarily Unavailable</h3>
-          <p className="text-center text-muted-foreground max-w-md">
-            The notifications service is currently unavailable due to scheduled maintenance. Please check back later. We
-            appreciate your patience.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="grid gap-6">
+        {notifications.length > 0 ? (
+          notifications.map((notification, index) => (
+            <Card key={index}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">{notification.title}</CardTitle>
+                <CardDescription>{new Date(notification.created_at).toLocaleDateString()}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p>{notification.message}</p>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+              <Bell className="h-10 w-10 text-gray-400 mb-4" />
+              <p className="text-lg font-medium">No notifications</p>
+              <p className="text-sm text-gray-500 mt-1">You don't have any notifications at the moment</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   )
 }
