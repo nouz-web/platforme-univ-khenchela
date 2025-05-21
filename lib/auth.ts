@@ -1,7 +1,6 @@
 "use server"
 
 import { cookies } from "next/headers"
-import { getUserByIdAndPassword } from "./db"
 
 export async function authenticateUser(id: string, password: string, userType: string) {
   try {
@@ -26,17 +25,52 @@ export async function authenticateUser(id: string, password: string, userType: s
       return { success: true }
     }
 
-    // For other users, check the database
-    const user = await getUserByIdAndPassword(id, password, userType)
-
-    if (user) {
-      // Set authentication cookie
+    // For demo purposes, accept these credentials
+    if (userType === "student" && id === "S12345" && password === "password") {
       cookies().set(
         "user",
         JSON.stringify({
-          id: user.id,
+          id,
           userType,
-          name: user.name,
+          name: "Ahmed Benali",
+        }),
+        {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          maxAge: 60 * 60 * 24, // 1 day
+          path: "/",
+        },
+      )
+
+      return { success: true }
+    }
+
+    if (userType === "teacher" && id === "T12345" && password === "password") {
+      cookies().set(
+        "user",
+        JSON.stringify({
+          id,
+          userType,
+          name: "Dr. Mohammed Alaoui",
+        }),
+        {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          maxAge: 60 * 60 * 24, // 1 day
+          path: "/",
+        },
+      )
+
+      return { success: true }
+    }
+
+    if (userType === "admin" && id === "A12345" && password === "password") {
+      cookies().set(
+        "user",
+        JSON.stringify({
+          id,
+          userType,
+          name: "Amina Tazi",
         }),
         {
           httpOnly: true,

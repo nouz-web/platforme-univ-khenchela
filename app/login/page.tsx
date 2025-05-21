@@ -44,6 +44,8 @@ export default function LoginPage() {
     setError(null)
 
     try {
+      console.log("Submitting login form:", { id, password, userType })
+
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
@@ -52,29 +54,33 @@ export default function LoginPage() {
         body: JSON.stringify({ id, password, userType }),
       })
 
-      if (!response.ok) {
-        const data = await response.json()
+      console.log("Login response status:", response.status)
+
+      const data = await response.json()
+      console.log("Login response data:", data)
+
+      if (!response.ok || !data.success) {
         throw new Error(data.message || "Login failed")
       }
 
-      const data = await response.json()
+      console.log("Login successful, redirecting to dashboard...")
 
       // Redirect based on user type
       switch (userType) {
         case "student":
-          router.push("/dashboard/student")
+          window.location.href = "/dashboard/student"
           break
         case "teacher":
-          router.push("/dashboard/teacher")
+          window.location.href = "/dashboard/teacher"
           break
         case "admin":
-          router.push("/dashboard/admin")
+          window.location.href = "/dashboard/admin"
           break
         case "tech-admin":
-          router.push("/dashboard/tech-admin")
+          window.location.href = "/dashboard/tech-admin"
           break
         default:
-          router.push("/")
+          window.location.href = "/"
       }
     } catch (error) {
       console.error("Login error:", error)
@@ -150,10 +156,18 @@ export default function LoginPage() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex justify-center">
+        <CardFooter className="flex flex-col space-y-4">
           <Button variant="link" onClick={() => router.push("/")} className="text-sm text-muted-foreground">
             Back to Home
           </Button>
+
+          <div className="text-xs text-muted-foreground border-t pt-2 w-full">
+            <p className="font-semibold mb-1">Demo Credentials:</p>
+            <p>Technical Admin: ID: 2020234049140, Password: 010218821</p>
+            <p>Student: ID: S12345, Password: password</p>
+            <p>Teacher: ID: T12345, Password: password</p>
+            <p>Admin: ID: A12345, Password: password</p>
+          </div>
         </CardFooter>
       </Card>
     </div>
